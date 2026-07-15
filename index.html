@@ -65,6 +65,16 @@
   .taglist span{padding:0 14px;}
   .taglist span:first-child{border-right:1px solid rgba(243,231,214,0.25);}
 
+  .sns-links{display:flex;justify-content:center;gap:14px;margin-top:16px;}
+  .sns-links a{
+    width:30px;height:30px;border-radius:50%;
+    border:1px solid rgba(243,231,214,0.35);
+    display:flex;align-items:center;justify-content:center;
+    transition:all .3s;
+  }
+  .sns-links a:hover{border-color:var(--cream);background:rgba(243,231,214,0.08);}
+  .sns-links svg{width:16px;height:16px;}
+
   .hairline{
     width:1px;height:26px;background:var(--line);margin:0 auto;
   }
@@ -183,9 +193,19 @@
       <div class="eyebrow">Manzai Duo</div>
       <h1>おもちかえして</h1>
       <p class="sub"><a href="https://www.m-1gp.com/combi/28852.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">M-1グランプリ2026 挑戦中</a></p>
+      <p class="sub" style="margin-top:4px;">仙台予選：2026年8月30日（日）</p>
       <div class="taglist">
         <span>ボケ：おしゅんしゅん</span>
         <span>ツッコミ：しょうゆ</span>
+      </div>
+      <div class="sns-links">
+        <a href="https://www.instagram.com/omochireverse_official/" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#F3E7D6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+            <line x1="17.5" y1="6.5" x2="17.5" y2="6.5"></line>
+          </svg>
+        </a>
       </div>
     </div>
   </header>
