@@ -106,15 +106,10 @@
     padding:20px 22px;box-shadow:0 14px 30px rgba(110,42,52,0.08);
     transition:transform .25s, box-shadow .25s, border-color .25s;
   }
-  .omo-cta:hover{transform:translateY(-2px);border-color:var(--wine-soft);box-shadow:0 18px 36px rgba(110,42,52,0.14);}
   .omo-cta-logo{width:64px;height:74px;flex:none;}
   .omo-cta-text{flex:1;min-width:0;display:flex;flex-direction:column;}
   .omo-cta-name{font-family:'Noto Sans JP',sans-serif;font-weight:500;font-size:24px;letter-spacing:-.01em;line-height:1.3;}
   .omo-cta-desc{font-size:12.5px;color:var(--ink-soft);}
-  .omo-cta-go{
-    flex:none;background:var(--wine);color:var(--cream);border-radius:999px;
-    padding:9px 18px;font-size:14px;font-weight:500;letter-spacing:.06em;white-space:nowrap;
-  }
   .omo-steps{
     list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 0;
   }
@@ -126,8 +121,13 @@
     flex:none;width:22px;height:22px;border-radius:50%;background:var(--wine);color:var(--cream);
     display:grid;place-items:center;font-size:11px;font-weight:500;
   }
-  .omo-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:24px;}
-  .omo-thumb{text-decoration:none;color:var(--ink);font-size:13px;}
+  .omo-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px 16px;margin-top:28px;}
+  .omo-thumb{position:relative;text-decoration:none;color:var(--ink);display:block;}
+  .omo-thumb .t{display:block;font-family:'Shippori Mincho',serif;font-weight:600;font-size:16px;letter-spacing:.04em;margin-top:4px;}
+  .omo-thumb .n{display:block;font-size:12px;color:var(--ink-soft);}
+  .omo-thumb .badge{position:absolute;left:10px;top:10px;background:var(--wine);color:var(--cream);font-size:11px;border-radius:6px;padding:0 8px;letter-spacing:.06em;}
+  .omo-thumb .play{position:absolute;left:50%;top:0;aspect-ratio:1;width:56px;margin-top:calc((100% * 9 / 16 - 56px) / 2);transform:translateX(-50%);border-radius:50%;background:rgba(63,24,32,.78);display:grid;place-items:center;pointer-events:none;}
+  .omo-thumb .play::after{content:"";border-left:16px solid var(--cream);border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px;}
   .omo-thumb img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;
     border:1px solid var(--line);background:var(--bg-warm);margin-bottom:6px;transition:opacity .2s;}
   .omo-thumb:hover img{opacity:.85;}
@@ -135,10 +135,8 @@
     .omo-cta{padding:16px;gap:12px;}
     .omo-cta-logo{width:48px;height:56px;}
     .omo-cta-name{font-size:20px;}
-    .omo-cta-go{padding:8px 14px;font-size:13px;}
     .omo-steps{grid-template-columns:1fr;}
   }
-
   footer{
     text-align:center;padding:60px 0 80px;color:var(--ink-soft);font-size:11px;
     letter-spacing:.08em;
@@ -186,21 +184,20 @@
     <section class="section">
       <div class="section-head">
         <div class="section-eyebrow">Videos</div>
-        <div class="section-title">ネタ動画はOmotubeで</div>
+        <div class="section-title">ネタ動画</div>
         <div class="section-sub">笑ったところでボタンを押すと、どこでウケたかが私たちに届きます</div>
       </div>
 
-      <a class="omo-cta" href="omotube/">
+      <div class="omo-cta">
         <img class="omo-cta-logo" src="omotube/omotube-logo.svg" alt="">
         <span class="omo-cta-text">
           <span class="omo-cta-name">Omotube</span>
           <span class="omo-cta-desc">おもちかえしてのネタ動画ページ</span>
         </span>
-        <span class="omo-cta-go">見る <span aria-hidden="true">→</span></span>
-      </a>
+      </div>
 
       <ol class="omo-steps">
-        <li><b>1</b>見たいネタを選ぶ</li>
+        <li><b>1</b>下から見たいネタを選ぶ</li>
         <li><b>2</b>笑ったら「笑った」を押す</li>
         <li><b>3</b>感想はコメントで</li>
       </ol>
@@ -219,18 +216,31 @@
     (function(){
       var box = document.getElementById('omoThumbs');
       if (!box || typeof OMOTUBE === 'undefined') return;
-      OMOTUBE.VIDEOS.forEach(function(v){
+      var countEls = {};
+      OMOTUBE.VIDEOS.forEach(function(v, i){
         var a = document.createElement('a');
         a.className = 'omo-thumb';
         a.href = 'omotube/watch.html?v=' + encodeURIComponent(v.id);
         var img = document.createElement('img');
         img.src = 'https://i.ytimg.com/vi/' + encodeURIComponent(v.id) + '/mqdefault.jpg';
         img.alt = ''; img.loading = 'lazy';
-        var t = document.createElement('span');
-        t.textContent = v.title || 'おもちかえして';
-        a.appendChild(img); a.appendChild(t);
+        a.appendChild(img);
+        var play = document.createElement('span'); play.className = 'play'; a.appendChild(play);
+        if (i === 0){ var b = document.createElement('span'); b.className = 'badge'; b.textContent = '最新'; a.appendChild(b); }
+        var t = document.createElement('span'); t.className = 't'; t.textContent = v.title || 'おもちかえして'; a.appendChild(t);
+        var n = document.createElement('span'); n.className = 'n'; n.textContent = v.note || ''; a.appendChild(n);
+        countEls[v.id] = n;
         box.appendChild(a);
       });
+      if (OMOTUBE.API_URL){
+        fetch(OMOTUBE.API_URL + '?counts=1').then(function(r){ return r.json(); }).then(function(d){
+          var c = d.counts || {};
+          Object.keys(countEls).forEach(function(id){
+            var base = countEls[id].textContent;
+            countEls[id].textContent = (base ? base + ' ・ ' : '') + 'コメント ' + (c[id] || 0) + ' 件';
+          });
+        }).catch(function(){});
+      }
     })();
   </script>
 
