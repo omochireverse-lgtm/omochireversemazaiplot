@@ -171,13 +171,11 @@
   .req-form textarea,.req-form input:not([type=radio]){width:100%;font:inherit;font-size:14px;color:var(--ink);
     background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
   .req-form textarea:focus,.req-form input:focus{outline:none;border-color:var(--wine-soft);}
-  .req-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .req-hp{position:absolute;left:-9999px;width:1px;height:1px;}
   .req-send{margin-top:14px;width:100%;border:0;border-radius:999px;background:var(--wine);color:var(--cream);
     font:inherit;font-size:15px;font-weight:500;padding:10px;cursor:pointer;}
   .req-send:disabled{opacity:.6;cursor:default;}
   .req-msg{font-size:13px;margin-top:8px;min-height:20px;text-align:center;}
-  @media (max-width:560px){ .req-row{grid-template-columns:1fr;} }
   footer{
     text-align:center;padding:60px 0 80px;color:var(--ink-soft);font-size:11px;
     letter-spacing:.08em;
@@ -289,16 +287,8 @@
         </div>
         <label class="req-label" for="reqText">内容</label>
         <textarea id="reqText" rows="4" maxlength="1000" placeholder="例：ネタはどうやって作っていますか？"></textarea>
-        <div class="req-row">
-          <div>
-            <label class="req-label" for="reqName">名前（なくてもOK）</label>
-            <input id="reqName" maxlength="30" autocomplete="nickname">
-          </div>
-          <div>
-            <label class="req-label" for="reqReply">返信先（なくてもOK）</label>
-            <input id="reqReply" maxlength="100" placeholder="InstagramのIDなど">
-          </div>
-        </div>
+        <label class="req-label" for="reqName">名前（なくてもOK）</label>
+        <input id="reqName" maxlength="30" autocomplete="nickname">
         <input class="req-hp" id="reqWebsite" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button type="submit" class="req-send" id="reqSend">送る</button>
         <p class="req-msg" id="reqMsg" role="status"></p>
@@ -370,7 +360,6 @@
           kind: form.querySelector('input[name=kind]:checked').value,
           text: text,
           name: document.getElementById('reqName').value.trim(),
-          reply: document.getElementById('reqReply').value.trim(),
           viewer: viewer
         })}).then(function(r){ return r.json(); }).then(function(d){
           if (!d.ok) throw new Error();
