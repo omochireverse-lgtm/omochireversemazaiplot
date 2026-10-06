@@ -3,7 +3,7 @@
    ========================================================= */
 const OMOTUBE = {
   // Apps Scriptを公開したときのURL（https://script.google.com/macros/s/.../exec）
-  API_URL: "",
+  API_URL: "https://script.google.com/macros/s/AKfycbwifLoKtI8jdVagXAwTJUS0gOIY7Jog5Yl8f5rzuWEnq_4rBRXyK9Tk9w9tBmG2B8s-sw/exec",
 
   // 「Omo」の文字色： "yaki" / "kinako" / "anko"
   LOGO: "anko",
