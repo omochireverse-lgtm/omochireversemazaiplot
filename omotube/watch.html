@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omotube｜おもちかえして</title>
+<style>
+  :root{
+    --bg:#ffffff; --surface:#f4f3f0; --text:#1d1c1a; --sub:#65635e; --muted:#99968f;
+    --line:#e6e4df; --accent:#d9542b; --accent-bg:#fbeae3; --accent-text:#8a2f12; --link:#2563c9;
+    --mochi:#fff8ec; --mochi-line:#5a3a22; --koge:#e0a96d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#141413; --surface:#22211f; --text:#efede8; --sub:#b3b0aa; --muted:#86837d;
+      --line:#34332f; --accent:#ef7a52; --accent-bg:#3d2117; --accent-text:#f7c4b0; --link:#7fb0ff;
+      --mochi:#fff3df; --mochi-line:#2a1a0e; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6}
+  header{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:var(--bg);z-index:5}
+  .logo{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text)}
+  .logo [data-omo-logo]{display:flex}.logo svg{width:44px;height:44px;transition:transform .2s}
+  .logo:hover svg{transform:scale(1.08,.92)}
+  .logo .word{font-weight:800;font-size:21px;letter-spacing:-.6px;line-height:1}
+  .logo .word em{font-style:normal;color:var(--word)}
+  @media (prefers-color-scheme: dark){ .logo .word em{color:var(--word-dark)} }
+  .logo small{display:block;font-size:10px;font-weight:500;color:var(--sub);letter-spacing:.5px;margin-top:2px}
+  main{max-width:1120px;margin:0 auto;padding:16px 16px 96px;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+  @media (min-width:960px){ main{grid-template-columns:minmax(0,1fr) 320px} }
+
+  /* 再生エリア（大画面にするとここ全体が全画面になる） */
+  .stage{position:relative;background:#000;border-radius:12px;overflow:hidden}
+  .ratio{position:relative;width:100%;aspect-ratio:16/9}
+  #player{position:absolute;inset:0;width:100%;height:100%}
+  .stage:fullscreen{border-radius:0;display:flex;align-items:center;justify-content:center}
+  .stage:fullscreen .ratio{width:min(100vw,calc(100vh*16/9))}
+  .stage.pseudo{position:fixed;inset:0;z-index:50;border-radius:0;display:flex;align-items:center;justify-content:center}
+  .stage.pseudo .ratio{width:min(100vw,calc(100vh*16/9))}
+  .bigbtn{position:absolute;top:10px;right:10px;z-index:3;border:0;border-radius:8px;
+    background:rgba(0,0,0,.55);color:#fff;font-size:13px;padding:6px 10px;cursor:pointer}
+
+  /* 追従する笑ったボタン */
+  #laugh{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:8px;
+    height:60px;padding:0 22px 0 18px;border:0;border-radius:30px;background:var(--accent);color:#fff;
+    font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    -webkit-tap-highlight-color:transparent;transition:transform .08s}
+  #laugh:active{transform:scale(.94)}
+  #laugh.pop{animation:pop .25s}
+  @keyframes pop{50%{transform:scale(1.1)}}
+  #laugh .count{background:rgba(255,255,255,.25);border-radius:10px;padding:0 8px;font-size:13px}
+  #laugh kbd{font:inherit;font-size:11px;background:rgba(255,255,255,.2);border-radius:4px;padding:0 5px}
+  @media (hover:none){ #laugh kbd{display:none} }
+  .float-msg{position:fixed;right:24px;bottom:88px;z-index:60;font-size:13px;color:#fff;background:rgba(0,0,0,.7);
+    padding:4px 10px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .float-msg.show{opacity:1}
+
+  h1{font-size:19px;font-weight:700;margin:12px 0 2px;line-height:1.4}
+  .channel{font-size:14px;color:var(--sub);margin:0}
+  .keys{font-size:12px;color:var(--muted);margin:6px 0 0}
+  @media (hover:none){ .keys{display:none} }
+  .test{font-size:12px;background:var(--accent-bg);color:var(--accent-text);border-radius:8px;padding:8px 10px;margin:0 0 12px}
+
+  .comments{margin-top:24px}
+  .chead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .chead h2{font-size:17px;margin:0}
+  .sort{display:flex;gap:6px}
+  .sort button{border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:16px;
+    padding:4px 12px;font-size:13px;cursor:pointer}
+  .sort button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .compose{display:flex;gap:10px;align-items:flex-start;margin-bottom:20px}
+  .avatar{flex:none;width:36px;height:36px;border-radius:50%;background:var(--surface);display:grid;place-items:center;
+    font-size:14px;font-weight:700;color:var(--sub)}
+  .compose .box{flex:1;min-width:0}
+  .compose input,.compose textarea{width:100%;font:inherit;color:var(--text);background:transparent;border:0;
+    border-bottom:1px solid var(--line);padding:6px 0;outline:none}
+  .compose input{font-size:13px;margin-bottom:4px}
+  .compose textarea{font-size:15px;resize:none;min-height:34px}
+  .compose input:focus,.compose textarea:focus{border-bottom-color:var(--text)}
+  .crow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .stamp{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .post{border:0;border-radius:18px;padding:7px 16px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+  .post:disabled{opacity:.6;cursor:default}
+  .err{color:#c0392b;font-size:13px;margin:4px 0 0;min-height:18px}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  ul{list-style:none;margin:0;padding:0}
+  li.c{display:flex;gap:10px;padding:10px 0}
+  .c .meta{font-size:13px;color:var(--sub)}
+  .c .meta b{color:var(--text);font-weight:600;margin-right:6px}
+  .c .body{font-size:15px;white-space:pre-wrap;word-break:break-word;margin-top:2px}
+  .ts{color:var(--link);background:none;border:0;padding:0;font:inherit;cursor:pointer;margin-right:4px}
+  .empty{color:var(--muted);font-size:14px;padding:12px 0}
+
+  /* 他のネタ */
+  aside h2{font-size:15px;margin:0 0 10px}
+  .vid{display:flex;gap:10px;text-decoration:none;color:var(--text);margin-bottom:12px;border-radius:8px}
+  .vid img{width:150px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:var(--surface);flex:none}
+  .vid .t{font-size:14px;font-weight:600;line-height:1.4}
+  .vid .s{font-size:12px;color:var(--sub)}
+  .vid.now{opacity:.55;pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="./" aria-label="Omotube 一覧へ">
+    <span data-omo-logo></span>
+    <span><span class="word"><em>Omo</em>tube</span><small>おもちかえして</small></span>
+  </a>
+</header>
+
+<main>
+  <div>
+    <p id="testBanner" class="test" hidden>テストモード：保存先につながっていないので、コメントはこの画面だけに表示され、再読み込みで消えます。</p>
+
+    <div class="stage" id="stage">
+      <div class="ratio"><div id="player"></div></div>
+      <button class="bigbtn" id="bigBtn" type="button">⛶ 大画面</button>
+      <button id="laugh" type="button"><span>😂 笑った</span><kbd>W</kbd><span class="count" id="myCount">0</span></button>
+      <div class="float-msg" id="floatMsg"></div>
+    </div>
+
+    <h1 id="title">読み込み中…</h1>
+    <p class="channel">おもちかえして ・ <a href="./" style="color:var(--link)">ネタ一覧へ</a></p>
+    <p class="keys">キーボード：W 笑った／スペース 再生・停止／← → 5秒戻る・進む／F 大画面</p>
+
+    <section class="comments">
+      <div class="chead">
+        <h2 id="ccount">コメント</h2>
+        <div class="sort">
+          <button type="button" data-sort="new" class="on">新しい順</button>
+          <button type="button" data-sort="time">再生位置順</button>
+        </div>
+      </div>
+
+      <div class="compose">
+        <div class="avatar" id="myAvatar">？</div>
+        <div class="box">
+          <input id="name" maxlength="20" placeholder="名前（なくてもOK）" autocomplete="nickname">
+          <textarea id="text" rows="1" maxlength="300" placeholder="コメントする…"></textarea>
+          <input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="crow">
+            <label class="stamp"><input type="checkbox" id="useTime" checked> <span id="stampLabel">再生位置を付ける</span></label>
+            <button id="post" class="post" type="button">コメント</button>
+          </div>
+          <p id="err" class="err"></p>
+        </div>
+      </div>
+
+      <ul id="list"></ul>
+    </section>
+  </div>
+
+  <aside id="others" hidden>
+    <h2>ほかのネタ</h2>
+    <div id="vids"></div>
+  </aside>
+</main>
+
+<script src="omotube.js"></script>
+<script>
+// 設定は omotube.js にまとめています
+const API_URL = OMOTUBE.API_URL;
+const VIDEOS = OMOTUBE.VIDEOS;
+omoMountLogo();
+
+const VIDEO_ID = new URLSearchParams(location.search).get("v") || VIDEOS[0].id;
+const TEST = !API_URL;
+if (TEST) document.getElementById("testBanner").hidden = false;
+
+const store = omoStore;
+const viewerId = store.get("omotube_viewer") || Math.random().toString(36).slice(2,10);
+store.set("omotube_viewer", viewerId);
+
+const $ = id => document.getElementById(id);
+function fmt(s){ s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
+
+function api(data){
+  if (TEST) return Promise.resolve({ ok:true });
+  return fetch(API_URL, { method:"POST", body: JSON.stringify(data) })
+    .then(r => r.json()).catch(() => ({ ok:false }));
+}
+
+/* ---- ほかのネタ ---- */
+if (VIDEOS.length > 1){ // 2本以上あるときだけ表示
+  $("others").hidden = false;
+  VIDEOS.forEach(v => {
+    const a = document.createElement("a");
+    a.className = "vid" + (v.id === VIDEO_ID ? " now" : "");
+    a.href = "watch.html?v=" + encodeURIComponent(v.id);
+    const img = document.createElement("img");
+    img.src = omoThumb(v.id); img.alt = ""; img.loading = "lazy";
+    const box = document.createElement("div");
+    const t = document.createElement("div"); t.className = "t"; t.textContent = v.title || "おもちかえして";
+    const s = document.createElement("div"); s.className = "s"; s.textContent = v.id === VIDEO_ID ? "再生中" : "おもちかえして";
+    box.append(t, s); a.append(img, box); $("vids").appendChild(a);
+  });
+}
+
+/* ---- YouTube ---- */
+let player, ready = false;
+const tag = document.createElement("script");
+tag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady = function(){
+  player = new YT.Player("player", {
+    videoId: VIDEO_ID,
+    // fs:0 = YouTube側の全画面を切り、こちらの「大画面」を使う（全画面でも笑ったボタンが出るように）
+    playerVars: { playsinline: 1, rel: 0, fs: 0 },
+    events: {
+      onReady: () => {
+        ready = true;
+        const listed = VIDEOS.find(v => v.id === VIDEO_ID);
+        const t = (listed && listed.title) || (player.getVideoData && player.getVideoData().title) || "";
+        $("title").textContent = t || "おもちかえして";
+        document.title = (t ? t + "｜" : "") + "Omotube";
+      }
+    }
+  });
+};
+function currentSec(){
+  if (!ready || !player.getCurrentTime) return null;
+  const st = player.getPlayerState();
+  const t = player.getCurrentTime();
+  if (st === YT.PlayerState.UNSTARTED || st === YT.PlayerState.CUED || t < 0.5) return null;
+  return Math.round(t * 10) / 10;
+}
+
+/* ---- 笑ったボタン（Wキーでも） ---- */
+let myCount = 0, lastPress = 0, msgTimer;
+function flash(text){
+  const m = $("floatMsg"); m.textContent = text; m.classList.add("show");
+  clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove("show"), 1400);
+}
+function laugh(){
+  const sec = currentSec();
+  if (sec === null){ flash("再生してから押してね"); return; }
+  const now = Date.now();
+  if (now - lastPress < 1000) return;      // 1秒以内の連打は1回
+  lastPress = now;
+  myCount++;
+  $("myCount").textContent = myCount;
+  flash(fmt(sec) + " で笑った");
+  const b = $("laugh"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+  api({ type:"laugh", video:VIDEO_ID, sec:sec, viewer:viewerId });
+}
+$("laugh").addEventListener("click", laugh);
+
+/* ---- 大画面 ---- */
+const stage = $("stage");
+function isBig(){ return document.fullscreenElement === stage || document.webkitFullscreenElement === stage || stage.classList.contains("pseudo"); }
+function toggleBig(){
+  if (isBig()){
+    if (stage.classList.contains("pseudo")) stage.classList.remove("pseudo");
+    else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+    if (req){
+      const p = req.call(stage);
+      if (p && p.catch) p.catch(() => stage.classList.add("pseudo"));
+    } else {
+      stage.classList.add("pseudo");          // iPhoneなど：画面いっぱい表示で代用
+    }
+  }
+}
+$("bigBtn").addEventListener("click", toggleBig);
+function syncBigLabel(){ $("bigBtn").textContent = isBig() ? "✕ 戻す" : "⛶ 大画面"; }
+document.addEventListener("fullscreenchange", syncBigLabel);
+document.addEventListener("webkitfullscreenchange", syncBigLabel);
+new MutationObserver(syncBigLabel).observe(stage, { attributes:true, attributeFilter:["class"] });
+
+/* ---- キーボード ----
+   動画をクリックするとキー入力がYouTube側に取られるので、すぐにこちらへ戻す */
+window.addEventListener("blur", () => {
+  setTimeout(() => {
+    const a = document.activeElement;
+    if (a && a.tagName === "IFRAME") { a.blur(); window.focus(); }
+  }, 0);
+});
+document.addEventListener("keydown", e => {
+  const tagName = (e.target.tagName || "").toLowerCase();
+  if (tagName === "input" || tagName === "textarea" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "w"){ e.preventDefault(); if (!e.repeat) laugh(); return; }
+  if (!ready) return;
+  if (k === " "){
+    e.preventDefault();
+    player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
+  } else if (k === "arrowleft"){
+    e.preventDefault(); player.seekTo(Math.max(0, player.getCurrentTime() - 5), true);
+  } else if (k === "arrowright"){
+    e.preventDefault(); player.seekTo(player.getCurrentTime() + 5, true);
+  } else if (k === "f"){
+    e.preventDefault(); toggleBig();
+  } else if (k === "escape" && stage.classList.contains("pseudo")){
+    stage.classList.remove("pseudo");
+  }
+});
+
+/* ---- コメント ---- */
+let comments = [], sortMode = "new";
+
+function initial(name){ return (name || "？").trim().charAt(0) || "？"; }
+$("name").value = store.get("omotube_name") || "";
+$("myAvatar").textContent = initial($("name").value);
+$("name").addEventListener("input", () => { $("myAvatar").textContent = initial($("name").value); });
+
+$("text").addEventListener("input", e => {
+  $("err").textContent = "";
+  e.target.style.height = "auto";
+  e.target.style.height = e.target.scrollHeight + "px";
+});
+setInterval(updateStampLabel, 1000);
+function updateStampLabel(){
+  const s = currentSec();
+  $("stampLabel").textContent = s === null ? "再生位置を付ける" : fmt(s) + " の場面に付ける";
+}
+
+function render(){
+  const list = $("list");
+  const arr = comments.slice();
+  if (sortMode === "time"){
+    arr.sort((a,b) => (a.sec === "" ? 1e9 : a.sec) - (b.sec === "" ? 1e9 : b.sec));
+  } else {
+    arr.sort((a,b) => (b.at || 0) - (a.at || 0));
+  }
+  $("ccount").textContent = "コメント " + comments.length + " 件";
+  list.innerHTML = "";
+  if (!arr.length){
+    const p = document.createElement("li"); p.className = "empty";
+    p.textContent = "まだコメントはありません。最初のひとことをどうぞ";
+    list.appendChild(p); return;
+  }
+  arr.forEach(c => {
+    const li = document.createElement("li"); li.className = "c";
+    const av = document.createElement("div"); av.className = "avatar"; av.textContent = initial(c.name);
+    const box = document.createElement("div");
+    const meta = document.createElement("div"); meta.className = "meta";
+    const nm = document.createElement("b"); nm.textContent = c.name || "名無し";
+    meta.appendChild(nm);
+    meta.appendChild(document.createTextNode(c.at ? ago(c.at) : ""));
+    const body = document.createElement("div"); body.className = "body";
+    if (c.sec !== "" && c.sec !== null && !isNaN(c.sec)){
+      const ts = document.createElement("button"); ts.type = "button"; ts.className = "ts";
+      ts.textContent = fmt(c.sec);
+      ts.addEventListener("click", () => {
+        if (!ready) return;
+        player.seekTo(Math.max(0, c.sec - 3), true); player.playVideo();
+        window.scrollTo({ top:0, behavior:"smooth" });
+      });
+      body.appendChild(ts);
+    }
+    body.appendChild(document.createTextNode(c.text));
+    box.append(meta, body);
+    li.append(av, box);
+    list.appendChild(li);
+  });
+}
+function ago(ms){
+  const d = (Date.now() - ms) / 1000;
+  if (d < 60) return "たった今";
+  if (d < 3600) return Math.floor(d/60) + "分前";
+  if (d < 86400) return Math.floor(d/3600) + "時間前";
+  if (d < 86400*30) return Math.floor(d/86400) + "日前";
+  return new Date(ms).toLocaleDateString("ja-JP");
+}
+
+document.querySelectorAll(".sort button").forEach(b => b.addEventListener("click", () => {
+  sortMode = b.dataset.sort;
+  document.querySelectorAll(".sort button").forEach(x => x.classList.toggle("on", x === b));
+  render();
+}));
+
+function load(){
+  if (TEST){ render(); return; }
+  fetch(API_URL + "?v=" + encodeURIComponent(VIDEO_ID))
+    .then(r => r.json())
+    .then(d => { comments = d.comments || []; render(); })
+    .catch(() => { $("ccount").textContent = "コメントを読み込めませんでした"; });
+}
+load();
+
+let lastPost = 0;
+$("post").addEventListener("click", async () => {
+  const text = $("text").value.trim();
+  if (!text){ $("err").textContent = "コメントを入力してください"; return; }
+  if ($("website").value) return;                       // ボット対策
+  if (Date.now() - lastPost < 10000){ $("err").textContent = "少し待ってからもう一度どうぞ"; return; }
+  const name = $("name").value.trim();
+  const sec = $("useTime").checked ? currentSec() : null;
+  store.set("omotube_name", name);
+  const btn = $("post"); btn.disabled = true; btn.textContent = "送信中…";
+  const res = await api({ type:"comment", video:VIDEO_ID, sec: sec === null ? "" : sec, name, text, viewer:viewerId });
+  btn.disabled = false; btn.textContent = "コメント";
+  if (!res.ok){ $("err").textContent = "送れませんでした。もう一度押してください"; return; }
+  lastPost = Date.now();
+  comments.push({ at: Date.now(), sec: sec === null ? "" : sec, name: name || "名無し", text });
+  $("text").value = ""; $("text").style.height = "auto";
+  render();
+});
+</script>
+</body>
+</html>
