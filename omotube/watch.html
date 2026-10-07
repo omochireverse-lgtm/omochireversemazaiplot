@@ -41,8 +41,17 @@
   .bigbtn{position:absolute;top:10px;right:10px;z-index:3;border:0;border-radius:8px;
     background:rgba(0,0,0,.55);color:#fff;font-size:13px;padding:6px 10px;cursor:pointer}
 
-  /* 追従する笑ったボタン */
-  #laugh{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:8px;
+  /* 追従するリアクションボタン（おもろい／分からん） */
+  .react{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:10px}
+  #wakaran{display:flex;align-items:center;gap:6px;height:46px;padding:0 14px;border:0;border-radius:23px;
+    background:#55534e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.22);
+    -webkit-tap-highlight-color:transparent;transition:transform .08s}
+  #wakaran:active{transform:scale(.94)}
+  #wakaran.pop{animation:pop .25s}
+  #wakaran .count{background:rgba(255,255,255,.22);border-radius:10px;padding:0 7px;font-size:12px}
+  #wakaran kbd{font:inherit;font-size:11px;background:rgba(255,255,255,.2);border-radius:4px;padding:0 5px}
+  @media (hover:none){ #wakaran kbd{display:none} }
+  #laugh{display:flex;align-items:center;gap:8px;
     height:60px;padding:0 22px 0 18px;border:0;border-radius:30px;background:var(--accent);color:#fff;
     font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);
     -webkit-tap-highlight-color:transparent;transition:transform .08s}
@@ -73,7 +82,7 @@
   .avatar{flex:none;width:36px;height:36px;border-radius:50%;background:var(--surface);display:grid;place-items:center;
     font-size:14px;font-weight:700;color:var(--sub)}
   .compose .box{flex:1;min-width:0}
-  .compose input,.compose textarea{width:100%;font:inherit;color:var(--text);background:transparent;border:0;
+  .compose input:not([type=checkbox]),.compose textarea{width:100%;font:inherit;color:var(--text);background:transparent;border:0;
     border-bottom:1px solid var(--line);padding:6px 0;outline:none}
   .compose input{font-size:13px;margin-bottom:4px}
   .compose textarea{font-size:15px;resize:none;min-height:34px}
@@ -116,13 +125,16 @@
     <div class="stage" id="stage">
       <div class="ratio"><div id="player"></div></div>
       <button class="bigbtn" id="bigBtn" type="button">⛶ 大画面</button>
-      <button id="laugh" type="button"><span>😂 笑った</span><kbd>W</kbd><span class="count" id="myCount">0</span></button>
+      <div class="react">
+        <button id="wakaran" type="button"><span>🤔 分からん</span><kbd>E</kbd><span class="count" id="myWakaran">0</span></button>
+        <button id="laugh" type="button"><span>😂 おもろい</span><kbd>W</kbd><span class="count" id="myCount">0</span></button>
+      </div>
       <div class="float-msg" id="floatMsg"></div>
     </div>
 
     <h1 id="title">読み込み中…</h1>
     <p class="channel">おもちかえして ・ <a href="../" style="color:var(--link)">ネタ一覧へ</a></p>
-    <p class="keys">キーボード：W 笑った／スペース 再生・停止／← → 5秒戻る・進む／F 大画面</p>
+    <p class="keys">キーボード：W おもろい／E 分からん／スペース 再生・停止／← → 5秒戻る・進む／F 大画面</p>
 
     <section class="comments">
       <div class="chead">
@@ -205,7 +217,7 @@ document.head.appendChild(tag);
 window.onYouTubeIframeAPIReady = function(){
   player = new YT.Player("player", {
     videoId: VIDEO_ID,
-    // fs:0 = YouTube側の全画面を切り、こちらの「大画面」を使う（全画面でも笑ったボタンが出るように）
+    // fs:0 = YouTube側の全画面を切り、こちらの「大画面」を使う（全画面でもおもろいボタンが出るように）
     playerVars: { playsinline: 1, rel: 0, fs: 0 },
     events: {
       onReady: () => {
@@ -214,7 +226,8 @@ window.onYouTubeIframeAPIReady = function(){
         const t = (listed && listed.title) || (player.getVideoData && player.getVideoData().title) || "";
         $("title").textContent = t || "おもちかえして";
         document.title = (t ? t + "｜" : "") + "Omotube";
-      }
+      },
+      onStateChange: e => { if (e.data === YT.PlayerState.ENDED) onEnded(); }
     }
   });
 };
@@ -226,25 +239,74 @@ function currentSec(){
   return Math.round(t * 10) / 10;
 }
 
-/* ---- 笑ったボタン（Wキーでも） ---- */
-let myCount = 0, lastPress = 0, msgTimer;
+/* ---- 視聴の記録（初見かどうか・どこまで見たか） ---- */
+const SEEN_KEY = "omotube_seen_" + VIDEO_ID;
+const FIRST_VIEW = !store.get(SEEN_KEY);           // このブラウザで初めてこのネタを見るか
+const VIEW_ID = Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+let started = false, maxSec = 0, lastT = null, skipped = false, finished = false, lastSent = -1, duration = 0;
+
+function viewPayload(){
+  return { type:"view", video:VIDEO_ID, viewer:viewerId, view:VIEW_ID, first:FIRST_VIEW,
+           max: Math.round(maxSec), duration: Math.round(duration), finished, skipped };
+}
+function sendView(useBeacon){
+  if (!started) return;
+  lastSent = maxSec;
+  const body = JSON.stringify(viewPayload());
+  if (TEST) return;
+  if (useBeacon && navigator.sendBeacon){ navigator.sendBeacon(API_URL, body); return; }
+  fetch(API_URL, { method:"POST", body, keepalive:true }).catch(() => {});
+}
+setInterval(() => {
+  if (!ready || !player.getPlayerState) return;
+  if (player.getPlayerState() !== YT.PlayerState.PLAYING){ lastT = null; return; }
+  const t = player.getCurrentTime();
+  if (!started){
+    started = true;
+    store.set(SEEN_KEY, "1");
+    duration = player.getDuration ? player.getDuration() : 0;
+    sendView();
+  }
+  if (lastT !== null){
+    const d = t - lastT;
+    if (d > 0 && d < 2.5) maxSec = Math.max(maxSec, t);   // 普通に再生して進んだ分だけ数える
+    else if (d >= 2.5) skipped = true;                      // 先へ飛ばした
+  }
+  lastT = t;
+  if (maxSec - lastSent >= 10) sendView();
+}, 1000);
+function onEnded(){
+  if (finished) return;
+  finished = true;
+  if (!skipped) maxSec = Math.max(maxSec, duration || maxSec);
+  sendView();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") sendView(true); });
+window.addEventListener("pagehide", () => sendView(true));
+
+/* ---- おもろい（W）／分からん（E） ---- */
+let myCount = 0, myWakaran = 0, lastPress = { omoro:0, wakaran:0 }, msgTimer;
 function flash(text){
   const m = $("floatMsg"); m.textContent = text; m.classList.add("show");
   clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove("show"), 1400);
 }
-function laugh(){
+function react(kind){
   const sec = currentSec();
   if (sec === null){ flash("再生してから押してね"); return; }
   const now = Date.now();
-  if (now - lastPress < 1000) return;      // 1秒以内の連打は1回
-  lastPress = now;
-  myCount++;
-  $("myCount").textContent = myCount;
-  flash(fmt(sec) + " で笑った");
-  const b = $("laugh"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
-  api({ type:"laugh", video:VIDEO_ID, sec:sec, viewer:viewerId });
+  if (now - lastPress[kind] < 1000) return;      // 1秒以内の連打は1回
+  lastPress[kind] = now;
+  const isOmoro = kind === "omoro";
+  if (isOmoro){ myCount++; $("myCount").textContent = myCount; }
+  else { myWakaran++; $("myWakaran").textContent = myWakaran; }
+  flash(fmt(sec) + (isOmoro ? " おもろい" : " 分からん"));
+  const b = $(isOmoro ? "laugh" : "wakaran"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+  api({ type:"laugh", kind: isOmoro ? "おもろい" : "分からん", video:VIDEO_ID, sec:sec,
+        viewer:viewerId, first:FIRST_VIEW, view:VIEW_ID });
 }
-$("laugh").addEventListener("click", laugh);
+function laugh(){ react("omoro"); }
+$("laugh").addEventListener("click", () => react("omoro"));
+$("wakaran").addEventListener("click", () => react("wakaran"));
 
 /* ---- 大画面 ---- */
 const stage = $("stage");
@@ -281,7 +343,8 @@ document.addEventListener("keydown", e => {
   const tagName = (e.target.tagName || "").toLowerCase();
   if (tagName === "input" || tagName === "textarea" || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
-  if (k === "w"){ e.preventDefault(); if (!e.repeat) laugh(); return; }
+  if (k === "w"){ e.preventDefault(); if (!e.repeat) react("omoro"); return; }
+  if (k === "e"){ e.preventDefault(); if (!e.repeat) react("wakaran"); return; }
   if (!ready) return;
   if (k === " "){
     e.preventDefault();
