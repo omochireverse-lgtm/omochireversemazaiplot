@@ -42,7 +42,14 @@
     background:rgba(0,0,0,.55);color:#fff;font-size:13px;padding:6px 10px;cursor:pointer}
 
   /* 追従するリアクションボタン（おもろい／分からん） */
-  .react{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:10px}
+  .react{position:sticky;bottom:10px;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    gap:40px;margin-top:12px;padding:8px;border-radius:40px;background:var(--bg);
+    box-shadow:0 0 0 1px var(--line), 0 6px 18px rgba(0,0,0,.08)}
+  .react #laugh{flex:1 1 auto;justify-content:center;max-width:420px}
+  .react #wakaran{flex:0 0 auto}
+  /* 大画面のときは動画の右下に重ねる */
+  .stage .react{position:fixed;right:20px;bottom:20px;z-index:60;margin:0;padding:0;background:none;box-shadow:none;gap:28px;border-radius:0}
+  .stage .react #laugh{flex:none}
   #wakaran{display:flex;align-items:center;gap:6px;height:46px;padding:0 14px;border:0;border-radius:23px;
     background:#55534e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.22);
     -webkit-tap-highlight-color:transparent;transition:transform .08s}
@@ -125,7 +132,7 @@
     <div class="stage" id="stage">
       <div class="ratio"><div id="player"></div></div>
       <button class="bigbtn" id="bigBtn" type="button">⛶ 大画面</button>
-      <div class="react">
+      <div class="react" id="react">
         <button id="wakaran" type="button"><span>🤔 分からん</span><kbd>E</kbd><span class="count" id="myWakaran">0</span></button>
         <button id="laugh" type="button"><span>😂 おもろい</span><kbd>W</kbd><span class="count" id="myCount">0</span></button>
       </div>
@@ -326,10 +333,17 @@ function toggleBig(){
   }
 }
 $("bigBtn").addEventListener("click", toggleBig);
-function syncBigLabel(){ $("bigBtn").textContent = isBig() ? "✕ 戻す" : "⛶ 大画面"; }
+function syncBigLabel(){
+  $("bigBtn").textContent = isBig() ? "✕ 戻す" : "⛶ 大画面";
+  // ボタンは大画面のときだけ動画の中に入れる（全画面でも見えるように）。普段は動画の下
+  const r = $("react");
+  if (isBig()) { if (r.parentElement !== stage) stage.appendChild(r); }
+  else if (r.previousElementSibling !== stage) stage.after(r);
+}
 document.addEventListener("fullscreenchange", syncBigLabel);
 document.addEventListener("webkitfullscreenchange", syncBigLabel);
 new MutationObserver(syncBigLabel).observe(stage, { attributes:true, attributeFilter:["class"] });
+syncBigLabel();
 
 /* ---- キーボード ----
    動画をクリックするとキー入力がYouTube側に取られるので、すぐにこちらへ戻す */
